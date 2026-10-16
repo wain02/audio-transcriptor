@@ -44,28 +44,10 @@ export function segments(
 }
 
 export async function transcribe(
-  provider: "openai" | "gemini",
+  provider: "gemini",
   audio: Uint8Array,
   duration: number,
 ) {
-  if (provider === "openai") {
-    const form = new FormData();
-    form.append("file", new Blob([new Uint8Array(audio)]), "audio.wav");
-    form.append("model", "whisper-1");
-    form.append("response_format", "verbose_json");
-    form.append("timestamp_granularities[]", "segment");
-    const original = await request(
-      "https://api.openai.com/v1/audio/transcriptions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.AUDIO_OPENAI_API_KEY || process.env.OPENAI_API_KEY}`,
-        },
-        body: form,
-      },
-    );
-    return { segments: segments(original.segments, 0, duration), original };
-  }
   const original = await request(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || "gemini-2.5-flash")}:generateContent`,
     {

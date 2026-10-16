@@ -20,14 +20,10 @@ export function accessError(request: Request): Response | null {
   return null;
 }
 export function configurationError(): Response | null {
-  if (
-    !(process.env.AUDIO_OPENAI_API_KEY || process.env.OPENAI_API_KEY) ||
-    !process.env.GEMINI_API_KEY
-  )
+  if (!process.env.GEMINI_API_KEY)
     return Response.json(
       {
-        error:
-          "Configura AUDIO_OPENAI_API_KEY y GEMINI_API_KEY en el servidor.",
+        error: "Configura GEMINI_API_KEY en el servidor.",
       },
       { status: 503 },
     );

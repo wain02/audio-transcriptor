@@ -1,5 +1,8 @@
 export type Segment = { start: number; end: number; text: string };
-export type Transcript = { provider: "openai" | "gemini"; segments: Segment[] };
+export type Transcript = {
+  provider: "openai" | "whisper-local" | "gemini";
+  segments: Segment[];
+};
 export type Difference = {
   id: string;
   start: number;
@@ -28,7 +31,7 @@ export type Resolution = {
   text: string;
 };
 export type OriginalResponse = {
-  provider: "openai" | "gemini";
+  provider: "openai" | "whisper-local" | "gemini";
   index: number;
   offset: number;
   response: unknown;

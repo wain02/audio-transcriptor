@@ -947,3 +947,24 @@ h1 {
     width: 100%;
   }
 }
+.local-model-note {
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  color: #80778f;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.local-model-note strong {
+  color: #786394;
+  font-size: 12px;
+}
+.local-model-note p {
+  margin: 8px 0;
+}
+.access-label select {
+  border: 1px solid #e5dfef;
+  border-radius: 6px;
+  background: #fcfbff;
+  color: #5a5269;
+  padding: 8px 12px;
+}

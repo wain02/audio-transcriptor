@@ -35,6 +35,7 @@ import {
 } from "@/lib/project";
 import { fingerprint } from "@/lib/browser-audio";
 import { transcribeLocal } from "@/lib/browser-transcribe";
+import type { WhisperLanguage } from "@/lib/local-whisper";
 type LocalAudio = { name: string; size: number; duration: number; url: string };
 function download(text: string, name: string) {
   const url = URL.createObjectURL(
@@ -66,6 +67,7 @@ export default function Home() {
     {},
   );
   const [password, setPassword] = useState("");
+  const [language, setLanguage] = useState<WhisperLanguage>("spanish");
   const [unsaved, setUnsaved] = useState(false);
   const [stage, setStage] = useState("");
   const projectInput = useRef<HTMLInputElement>(null);
@@ -93,6 +95,10 @@ export default function Home() {
   );
   const processing = uploading || job?.status === "processing";
   const complete = job?.status === "complete";
+  const whisperLabel =
+    job?.openai?.provider === "openai"
+      ? "OpenAI (proyecto anterior)"
+      : "Whisper local";
   const differences = job?.differences || [];
   const pending = differences.filter(
     (d) => d.different && !resolutions[d.id],
@@ -188,6 +194,7 @@ export default function Home() {
           setJob(j);
           setStage(j.stage);
         },
+        language,
       );
       setUnsaved(true);
     } catch (e) {
@@ -357,8 +364,8 @@ export default function Home() {
           <div className="secure-card">
             <ShieldCheck size={18} style={{ color: "#a292c7" }} />
             <strong>Tu audio, bajo tu control</strong>Las claves permanecen en
-            el servidor. Revisa las políticas de ambos proveedores antes de
-            subir datos sensibles.
+            el servidor. Revisa la política de Google antes de subir datos
+            sensibles.
           </div>
           <div className="profile">
             <div className="avatar">AT</div>
@@ -432,14 +439,16 @@ export default function Home() {
               </p>
               <p>
                 El audio permanece en tu equipo. Se envían fragmentos temporales
-                a OpenAI y Gemini a través del servidor, sin guardarlos allí.
-                Guarda el proyecto JSON en tu disco para conservar ambas
+                a Gemini a través del servidor, sin guardarlos allí. Whisper se
+                ejecuta en tu computadora sin llamar a la API de OpenAI. Guarda
+                el proyecto JSON en tu disco para conservar ambas
                 transcripciones y las correcciones. Al reabrirlo, selecciona el
                 audio original para escuchar. No hay guardado automático:
                 descarga el proyecto antes de cerrar esta página.
               </p>
               <p>
-                OpenAI utiliza Whisper con tiempos de segmento. Los tiempos de
+                Whisper tiny se ejecuta localmente con tiempos de segmento y
+                puede ser menos preciso que modelos grandes. Los tiempos de
                 Gemini son estimaciones del modelo: los bloques pueden agruparse
                 cuando sus límites no coinciden. Comprueba siempre el audio.
               </p>
@@ -501,6 +510,26 @@ export default function Home() {
               Solo se necesita para transcribir. Abrir, revisar y exportar un
               proyecto funciona sin contraseña.
             </div>
+          </div>
+          <div className="card local-model-note">
+            <strong>Whisper local · Sin clave ni cargos de OpenAI</strong>
+            <p>
+              La primera vez se descarga el modelo desde Hugging Face (decenas
+              de MB). Se procesa en tu computadora y puede tardar más que una
+              API. El navegador puede conservar el modelo en caché; Gemini sigue
+              usando su propia cuota.
+            </p>
+            <label className="access-label">
+              Idioma del audio{" "}
+              <select
+                value={language}
+                disabled={processing}
+                onChange={(e) => setLanguage(e.target.value as WhisperLanguage)}
+              >
+                <option value="spanish">Español</option>
+                <option value="english">Inglés</option>
+              </select>
+            </label>
           </div>
           <div className="steps">
             {[
@@ -659,8 +688,12 @@ export default function Home() {
                     <AudioLines size={20} />
                   </div>
                   <div>
-                    <strong>OpenAI</strong>
-                    <small>Whisper · Transcripción original</small>
+                    <strong>{whisperLabel}</strong>
+                    <small>
+                      {job?.openai?.provider === "openai"
+                        ? "Transcripción importada · API anterior"
+                        : "En tu equipo · Sin cargos de OpenAI"}
+                    </small>
                   </div>
                   <Check className="check" size={14} />
                 </div>
@@ -716,7 +749,7 @@ export default function Home() {
                   <div>
                     <strong>Dos escuchas independientes</strong>
                     <p>
-                      OpenAI y Gemini transcriben tu audio sin conocer la
+                      Whisper local y Gemini transcriben tu audio sin conocer la
                       versión del otro.
                     </p>
                   </div>
@@ -878,7 +911,7 @@ export default function Home() {
                       <div
                         className={`transcript ${resolutions[d.id]?.choice === "openai" ? "chosen" : ""}`}
                       >
-                        <strong>OPENAI · WHISPER</strong>
+                        <strong>{whisperLabel.toUpperCase()}</strong>
                         {d.openai || <em>Sin contenido en este intervalo</em>}
                       </div>
                       <div
@@ -899,7 +932,7 @@ export default function Home() {
                             }
                             onClick={() => resolve(d, "openai")}
                           >
-                            Aceptar OpenAI
+                            Aceptar {whisperLabel}
                           </button>
                           <button
                             className={

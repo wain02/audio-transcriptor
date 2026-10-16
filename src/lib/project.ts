@@ -61,7 +61,8 @@ export function parseProject(text: string): Project {
   ): Transcript {
     if (
       !record(raw) ||
-      raw.provider !== provider ||
+      (raw.provider !== provider &&
+        !(provider === "openai" && raw.provider === "whisper-local")) ||
       !Array.isArray(raw.segments) ||
       raw.segments.length > 50000
     )
@@ -83,7 +84,7 @@ export function parseProject(text: string): Project {
       previous = s.start;
       return { start: s.start, end: s.end, text: s.text };
     });
-    return { provider, segments };
+    return { provider: raw.provider as Transcript["provider"], segments };
   }
   const openai = transcript(source.openai, "openai");
   const gemini = transcript(source.gemini, "gemini");
@@ -123,7 +124,9 @@ export function parseProject(text: string): Project {
     for (const o of source.originals) {
       if (
         !record(o) ||
-        (o.provider !== "openai" && o.provider !== "gemini") ||
+        (o.provider !== "openai" &&
+          o.provider !== "whisper-local" &&
+          o.provider !== "gemini") ||
         !finite(o.index) ||
         !Number.isInteger(o.index) ||
         o.index < 0 ||

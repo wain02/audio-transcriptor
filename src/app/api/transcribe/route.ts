@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   const forbidden = accessError(request) || configurationError();
   if (forbidden) return forbidden;
   const provider = request.headers.get("x-provider");
-  if (provider !== "openai" && provider !== "gemini")
+  if (provider !== "gemini")
     return Response.json({ error: "Proveedor inválido." }, { status: 400 });
   if (!request.body)
     return Response.json(

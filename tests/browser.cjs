@@ -35,6 +35,12 @@ function wav(seconds = 91) {
   });
   page.setDefaultTimeout(60000);
   const requests = [];
+  await page.route("**/whisper/worker.js", (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: `self.onmessage=({data})=>{if(data.type==='load'){self.postMessage({type:'ready'});return;}if(!(data.audio instanceof Float32Array)||data.audio.length===0)throw Error('Expected decoded local PCM');self.postMessage({type:'result',original:{text:'Quince euros.',chunks:[{text:'Quince euros.',timestamp:[0,1]}]}});};`,
+    }),
+  );
   await page.route("**/api/access", (r) => r.fulfill({ json: { ok: true } }));
   await page.route("**/api/transcribe", (r) => {
     const req = r.request();
@@ -43,7 +49,9 @@ function wav(seconds = 91) {
       throw Error("Chunk invalid or too big");
     const provider = req.headers()["x-provider"];
     requests.push({ provider, size: data.length });
-    const text = provider === "openai" ? "Quince euros." : "Cincuenta euros.";
+    if (provider !== "gemini")
+      throw Error("Only Gemini may receive network audio");
+    const text = "Cincuenta euros.";
     return r.fulfill({
       json: {
         segments: [{ start: 0, end: 1, text }],
@@ -78,19 +86,19 @@ function wav(seconds = 91) {
     .getByRole("button", { name: "Transcripción completada" })
     .waitFor({ timeout: 120000 });
   if (
-    requests.length !== 4 ||
-    requests.filter((r) => r.provider === "openai").length !== 2
+    requests.length !== 2 ||
+    requests.filter((r) => r.provider === "gemini").length !== 2
   )
     throw Error(
-      "Expected two real browser chunks per model, got " +
+      "Expected two Gemini requests and no OpenAI network calls, got " +
         JSON.stringify(requests),
     );
   console.log(
-    "PASS: real FFmpeg WASM + WORKERFS generated 90-second and 1-second chunks for both mocked providers",
+    "PASS: real FFmpeg WASM + WORKERFS generated 90-second and 1-second chunks with a mocked local Whisper worker and mocked Gemini",
     requests,
   );
   const accepts = page.getByRole("button", {
-    name: "Aceptar OpenAI",
+    name: "Aceptar Whisper local",
     exact: true,
   });
   await accepts.nth(0).click();
@@ -152,7 +160,7 @@ function wav(seconds = 91) {
   await page.waitForFunction(
     () => document.querySelector("audio")?.currentTime >= 87,
   );
-  if (requests.length !== 4) throw Error("Reattaching triggered transcription");
+  if (requests.length !== 2) throw Error("Reattaching triggered transcription");
   const txtDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Exportar TXT" }).click();
   const txt = await txtDownload;
